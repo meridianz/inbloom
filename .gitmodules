@@ -1,3 +1,0 @@
-[submodule "py/vendor/libbloom"]
-	path = py/vendor/libbloom
-	url = https://github.com/jvirkki/libbloom
