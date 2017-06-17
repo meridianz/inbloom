@@ -1,0 +1,3 @@
+[submodule "libblossom"]
+	path = libblossom
+	url = https://github.com/meridianz/libblossom
