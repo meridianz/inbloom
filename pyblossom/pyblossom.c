@@ -14,7 +14,7 @@ typedef struct {
 static PyTypeObject FilterType = {
     PyObject_HEAD_INIT(NULL)
     0,                          /*ob_size*/
-    "inbloom.Filter",           /*tp_name*/
+    "pyblossom.Filter",         /*tp_name*/
     sizeof(Filter),             /*tp_basicsize*/
     0,                          /*tp_itemsize*/
     0,                          /*tp_dealloc*/
@@ -42,7 +42,7 @@ struct serialized_filter_header {
     uint32_t cardinality;
 };
 
-static PyObject *InBloomError;
+static PyObject *PyBlossomError;
 
 static PyObject *
 instantiate_filter(uint32_t cardinality, uint16_t error_rate, const char *data, int datalen)
@@ -97,7 +97,7 @@ load(PyObject *self, PyObject *args)
     }
 
     if (buflen < sizeof(struct serialized_filter_header) + 1) {
-        PyErr_SetString(InBloomError, "incomplete payload");
+        PyErr_SetString(PyBlossomError, "incomplete payload");
         return NULL;
     }
 
@@ -108,7 +108,7 @@ load(PyObject *self, PyObject *args)
     datalen = buflen - sizeof(struct serialized_filter_header);
     expected_checksum = compute_checksum(data, datalen);
     if (expected_checksum != header.checksum) {
-        PyErr_SetString(InBloomError, "checksum mismatch");
+        PyErr_SetString(PyBlossomError, "checksum mismatch");
         return NULL;
     }
     return instantiate_filter(header.cardinality, header.error_rate, data, datalen);
@@ -131,7 +131,7 @@ dump(PyObject *self, PyObject *args)
     header.checksum = htons(checksum);
     header.error_rate = htons(1.0 / filter->_bloom_struct->error);
     header.cardinality = htonl(filter->_bloom_struct->entries);
-    
+
     serial_header = PyString_FromStringAndSize((const char *)&header, sizeof(struct serialized_filter_header));
     serial_data = PyString_FromStringAndSize((const char *)filter->_bloom_struct->bf, filter->_bloom_struct->bytes);
     PyString_Concat(&serial_header, serial_data);
@@ -229,7 +229,7 @@ Filter_init(Filter *self, PyObject *args, PyObject *kwargs)
     if (success == 0) {
         if (data != NULL) {
             if ((int)len != self->_bloom_struct->bytes) {
-                PyErr_SetString(InBloomError, "invalid data length");
+                PyErr_SetString(PyBlossomError, "invalid data length");
                 return -1;
             }
             memcpy(self->_bloom_struct->bf, (const unsigned char *)data, self->_bloom_struct->bytes);
@@ -237,7 +237,7 @@ Filter_init(Filter *self, PyObject *args, PyObject *kwargs)
         return 0;
     }
     else {
-        PyErr_SetString(InBloomError, "internal initialization failed");
+        PyErr_SetString(PyBlossomError, "internal initialization failed");
         return -1;
     }
 }
@@ -247,7 +247,7 @@ Filter_init(Filter *self, PyObject *args, PyObject *kwargs)
 #define PyMODINIT_FUND void
 #endif
 PyMODINIT_FUNC
-initinbloom(void)
+initpyblossom(void)
 {
     PyObject *m;
     FilterType.tp_new = Filter_new;
@@ -257,11 +257,11 @@ initinbloom(void)
     if (PyType_Ready(&FilterType) < 0)
         return;
 
-    m = Py_InitModule3("inbloom", module_methods, module_docstring);
+    m = Py_InitModule3("pyblossom", module_methods, module_docstring);
     Py_INCREF(&FilterType);
     PyModule_AddObject(m, "Filter", (PyObject *)&FilterType);
 
-    InBloomError = PyErr_NewException("inbloom.error", NULL, NULL);
-    Py_INCREF(InBloomError);
-    PyModule_AddObject(m, "error", InBloomError);
+    PyBlossomError = PyErr_NewException("pyblossom.error", NULL, NULL);
+    Py_INCREF(PyBlossomError);
+    PyModule_AddObject(m, "error", PyBlossomError);
 }
