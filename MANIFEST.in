@@ -1,4 +1,4 @@
 include VERSION
 include README.rst
-graft vendor
-include inbloom/crc32.c
+graft libblossom
+include pyblossom/crc32.c

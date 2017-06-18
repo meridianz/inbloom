@@ -1,4 +1,5 @@
-from setuptools import setup, Extension
+from setuptools import setup
+from setuptools.extension import Extension
 from os import path
 
 pwd = lambda f: path.join(path.abspath(path.dirname(__file__)), f)
