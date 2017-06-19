@@ -40,8 +40,11 @@
  * CRC32 code derived from work by Gary S. Brown.
  */
 
-//#include <stdint.h>
-#include "pstdint.h"
+#ifdef __linux__
+    #include <stdint.h>
+#elif _WIN32
+    #include "pstdint.h"
+#endif
 #include <stdlib.h>
 
 static uint32_t crc32_tab[] = {

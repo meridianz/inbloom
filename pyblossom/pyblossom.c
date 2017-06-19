@@ -1,6 +1,9 @@
 #include <Python.h>
-//#include <arpa/inet.h>
-#include <Winsock2.h>
+#ifdef __linux__
+    #include <arpa/inet.h>
+#elif _WIN32
+    #include <Winsock2.h>
+#endif
 #include "../libblossom/bloom.h"
 #include "crc32.c"
 
