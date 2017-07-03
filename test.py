@@ -1,9 +1,44 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import absolute_import, division
-from unittest import TestCase
-from binascii import hexlify
-import inbloom
+import unittest
+import pyblossom
+# from binascii import hexlify
 
+class PyBloomTestCase(unittest.TestCase):
 
+    def test_dump_ex_memview(self):
+        bloom = pyblossom.Filter(entries=1000, error=0.001)
+        bloom.add('test')
+        self.assertTrue(bloom.contains('test'))
+        self.assertFalse(bloom.contains('fail'))
+
+        entries, error, buf = pyblossom.dump_ex(bloom)
+        # print entries, error, buf, len(buf)
+        self.assertEquals(entries, 1000)
+        self.assertEquals(error, 0.001)
+
+        bloom = pyblossom.Filter(entries=entries, error=error, data=buf)
+        self.assertTrue(bloom.contains('test'))
+        self.assertFalse(bloom.contains('fail'))
+
+    def test_dump_ex_string(self):
+        bloom = pyblossom.Filter(entries=1000, error=0.001)
+        bloom.add('test')
+        self.assertTrue(bloom.contains('test'))
+        self.assertFalse(bloom.contains('fail'))
+
+        entries, error, buf = pyblossom.dump_ex(bloom)
+        # print entries, error, buf, len(buf)
+        self.assertEquals(entries, 1000)
+        self.assertEquals(error, 0.001)
+        buf = buf.tobytes()
+
+        bloom = pyblossom.Filter(entries=entries, error=error, data=buf)
+        self.assertTrue(bloom.contains('test'))
+        self.assertFalse(bloom.contains('fail'))
+
+'''
 class InBloomTestCase(TestCase):
     def test_functionality(self):
         bf = inbloom.Filter(20, 0.01)
@@ -42,3 +77,7 @@ class InBloomTestCase(TestCase):
         data = data[:4]
         with self.assertRaisesRegexp(inbloom.error, "incomplete payload"):
             inbloom.load(data)
+'''
+
+if __name__ == '__main__':
+    unittest.main()

@@ -141,11 +141,33 @@ dump(PyObject *self, PyObject *args)
     return serial_header;
 }
 
+static PyObject *
+dump_ex(PyObject *self, PyObject *args)
+{
+    Filter *filter;
+    struct bloom *bloom_struct;
+    Py_buffer pybuf;
+    PyObject *memview;
+
+    if (!PyArg_ParseTuple(args, "O", &filter)) {
+        return NULL;
+    }
+
+    bloom_struct = filter->_bloom_struct;
+    PyBuffer_FillInfo(&pybuf, NULL, bloom_struct->bf, bloom_struct->bytes, 1, 
+        PyBUF_CONTIG_RO);
+    memview = PyMemoryView_FromBuffer(&pybuf);
+    return Py_BuildValue("idO", bloom_struct->entries, bloom_struct->error, 
+        memview);
+}
+
 static PyMethodDef module_methods[] = {
     {"load", (PyCFunction)load, METH_VARARGS,
      "load a serialized filter"},
     {"dump", (PyCFunction)dump, METH_VARARGS,
      "dump a filter into a string"},
+    {"dump_ex", (PyCFunction)dump_ex, METH_VARARGS,
+     "dump a filter and return it as memory view with params (without crc32 check)"},
     {NULL}
 };
 
@@ -223,19 +245,35 @@ Filter_init(Filter *self, PyObject *args, PyObject *kwargs)
     static char *kwlist[] = {"entries", "error", "data", NULL};
     int entries, success;
     double error;
-    const char *data = NULL;
-    Py_ssize_t len;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "id|s#", kwlist, &entries, &error, &data, &len)) {
+    PyObject *buf_src = NULL;
+    Py_buffer buf;
+    struct bloom *bloom_struct;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "id|O", kwlist, &entries, &error, &buf_src)) {
         return -1;
     }
-    success = bloom_init(self->_bloom_struct, entries, error);
+
+    bloom_struct = self->_bloom_struct;
+    success = bloom_init(bloom_struct, entries, error);
+
     if (success == 0) {
-        if (data != NULL) {
-            if ((int)len != self->_bloom_struct->bytes) {
+        if (buf_src != NULL) {
+            if (!PyObject_CheckBuffer(buf_src)) {
+                PyErr_SetString(PyBlossomError, "buffer interface is not supported by provided data type");
+                return -1;
+            }
+
+            if (PyObject_GetBuffer(buf_src, &buf, PyBUF_CONTIG_RO) < 0) {
+                PyErr_SetString(PyBlossomError, "could not get buffer from provided data type");
+                return -1;
+            }
+
+            if ((int)buf.len != bloom_struct->bytes) {
                 PyErr_SetString(PyBlossomError, "invalid data length");
                 return -1;
             }
-            memcpy(self->_bloom_struct->bf, (const unsigned char *)data, self->_bloom_struct->bytes);
+            memcpy(bloom_struct->bf, (const unsigned char *)buf.buf, 
+                bloom_struct->bytes);
         }
         return 0;
     }
