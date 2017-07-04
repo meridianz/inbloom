@@ -38,6 +38,21 @@ class PyBloomTestCase(unittest.TestCase):
         self.assertTrue(bloom.contains('test'))
         self.assertFalse(bloom.contains('fail'))
 
+    def test_direct_buffer_loading(self):
+        bloom = pyblossom.Filter(entries=1000, error=0.001)
+        bloom.add('test')
+        self.assertTrue(bloom.contains('test'))
+        self.assertFalse(bloom.contains('fail'))
+
+        entries, error, buf = pyblossom.dump_ex(bloom)
+        buf = buf.tobytes()
+
+        bloom = pyblossom.Filter(entries=entries, error=error)
+        bloom_buf = bloom.get_buffer()
+        bloom_buf[0:len(bloom_buf)] = buf
+        self.assertTrue(bloom.contains('test'))
+        self.assertFalse(bloom.contains('fail'))
+
 '''
 class InBloomTestCase(TestCase):
     def test_functionality(self):

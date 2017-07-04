@@ -201,9 +201,17 @@ Filter_check(Filter *self, PyObject *args)
 }
 
 static PyObject *
-Filter_buffer(Filter *self, PyObject *args)
+Filter_get_buffer(Filter *self, PyObject *args)
 {
-    return PyString_FromStringAndSize((const char *)self->_bloom_struct->bf, self->_bloom_struct->bytes);
+    Py_buffer pybuf;
+    PyObject *memview;
+    struct bloom *bloom_struct;
+
+    bloom_struct = self->_bloom_struct;
+    PyBuffer_FillInfo(&pybuf, NULL, bloom_struct->bf, bloom_struct->bytes, 
+        0, PyBUF_CONTIG);
+    memview = PyMemoryView_FromBuffer(&pybuf);
+    return Py_BuildValue("O", memview);
 }
 
 static PyMethodDef Filter_methods[] = {
@@ -211,8 +219,8 @@ static PyMethodDef Filter_methods[] = {
      "add a member to the filter"},
     {"contains", (PyCFunction)Filter_check, METH_VARARGS,
      "check if member exists the filter"},
-    {"buffer", (PyCFunction)Filter_buffer, METH_NOARGS,
-     "get a copy of the internal buffer"},
+    {"get_buffer", (PyCFunction)Filter_get_buffer, METH_NOARGS,
+     "get writable memoryview of the internal buffer"},
     {NULL}  /* Sentinel */
 };
 
